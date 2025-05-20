@@ -1,12 +1,24 @@
 # CaptiFi Plug & Play Box - OpenWrt Implementation
 
-This folder contains all the necessary files to implement a custom setup splash page for CaptiFi Plug & Play boxes running on OpenWrt devices. The implementation allows users to easily activate their OpenWrt devices with a PIN before they can be used with the main CaptiFi captive portal.
+This repository contains all the necessary files to implement a custom setup splash page for CaptiFi Plug & Play boxes running on OpenWrt devices. The implementation allows users to easily activate their OpenWrt devices with a PIN before they can be used with the main CaptiFi captive portal.
+
+## Quick Installation
+
+For quick setup, use our automated installation script:
+
+```bash
+# One-line installation
+curl -sSL https://raw.githubusercontent.com/captifi/plug_play_box/main/openwrt-install.sh | sh
+```
+
+For more detailed installation instructions, see [README-OPENWRT-INSTALL.md](README-OPENWRT-INSTALL.md).
 
 ## File Structure
 
 ```
-/Plug and Play Box/
+/
 ├── README.md                      # This file
+├── openwrt-install.sh             # Automated installation script
 ├── etc/                           # OpenWrt system configuration
 │   ├── config/                    # Configuration files
 │   │   ├── firewall               # Firewall rules for captive portal
@@ -18,6 +30,7 @@ This folder contains all the necessary files to implement a custom setup splash 
         ├── activate.cgi           # CGI script to handle PIN activation
         ├── setup.html             # Main setup page HTML template
         ├── setup.lua              # Lua handler for setup page
+        ├── splash.html            # Transition page after activation
         └── assets/                # Static assets
             └── logo-placeholder.txt # Placeholder for logo image
 ```
@@ -47,7 +60,23 @@ This folder contains all the necessary files to implement a custom setup splash 
 
 ## Installation on OpenWrt
 
-To install on an actual OpenWrt device:
+### Automated Installation (Recommended)
+
+Our automated installation script handles all the setup for you:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/captifi/plug_play_box/main/openwrt-install.sh | sh
+```
+
+This will:
+1. Install all required packages
+2. Download and place all files in the correct locations
+3. Configure your system properly
+4. Enable necessary services
+
+### Manual Installation
+
+If you prefer a more hands-on approach:
 
 1. Install required packages:
    ```
@@ -75,12 +104,19 @@ To install on an actual OpenWrt device:
    - Update the CaptiFi server URL in `captifi-client.sh`
    - Replace the logo placeholder with your actual logo
 
-## Customization
+## Activating Your Box
 
-To customize the appearance of the setup page:
-- Edit the HTML/CSS in `setup.html`
-- Replace the logo placeholder with your actual logo
-- Adjust the firewall rules in `firewall` if needed
+After installation:
+
+1. Generate a PIN in your CaptiFi admin panel
+2. On the OpenWrt device, run:
+   ```
+   captifi-client.sh activate YOUR_PIN_HERE
+   ```
+3. Verify status with:
+   ```
+   captifi-client.sh status
+   ```
 
 ## Troubleshooting
 
@@ -88,7 +124,7 @@ If you encounter issues:
 1. Check the log file: `/var/log/captifi.log`
 2. Verify connectivity to the CaptiFi API server
 3. Ensure the device has internet access
-4. Check the activation status: `captifi-client.sh status`
+4. Check the firewall rules: `uci show firewall`
 
 ## Security Notes
 
@@ -96,3 +132,14 @@ If you encounter issues:
 - The PIN is only used once during activation
 - After activation, the box automatically uses the standard CaptiFi security measures
 - The MAC address of the device is verified with each request to prevent unauthorized access
+
+## Customization
+
+To customize the appearance of the setup page:
+- Edit the HTML/CSS in `setup.html`
+- Replace the logo placeholder with your actual logo
+- Adjust the firewall rules in `firewall` if needed
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
