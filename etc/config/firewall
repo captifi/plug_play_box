@@ -1,0 +1,79 @@
+# /etc/config/firewall
+# CaptiFi Plug & Play Box - Firewall Configuration with Captive Portal Rules
+
+# Basic firewall setup
+config defaults
+	option syn_flood '1'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+# Zones configuration
+config zone
+	option name 'lan'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'ACCEPT'
+	list network 'lan'
+
+config zone
+	option name 'wan'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option masq '1'
+	option mtu_fix '1'
+	list network 'wan'
+	list network 'wan6'
+
+# Zone forwarding
+config forwarding
+	option src 'lan'
+	option dest 'wan'
+
+# Redirection rule for captive portal
+# This rule intercepts all HTTP traffic and redirects it to the setup page
+# until the device is activated
+config redirect 'captifi_setup_redirect'
+	option name 'CaptiFi Setup Redirect'
+	option src 'lan'
+	option proto 'tcp'
+	option src_dport '80'
+	option dest_port '80'
+	option target 'DNAT'
+	option dest 'lan'
+	option dest_ip '192.168.1.1' # Box's own IP address
+	option enabled '1'
+
+# Rule to allow DNS lookups
+config rule
+	option name 'Allow-DNS'
+	option src 'lan'
+	option dest_port '53'
+	option proto 'tcpudp'
+	option target 'ACCEPT'
+
+# Rule to allow DHCP
+config rule
+	option name 'Allow-DHCP'
+	option src 'lan'
+	option src_port '67-68'
+	option dest_port '67-68'
+	option proto 'udp'
+	option target 'ACCEPT'
+
+# Rule to allow ICMP (ping)
+config rule
+	option name 'Allow-ICMP'
+	option src '*'
+	option proto 'icmp'
+	option target 'ACCEPT'
+
+# Rule to allow outbound traffic to CaptiFi server (needs to be customized with real IP)
+config rule
+	option name 'Allow-CaptiFi-Server'
+	option src 'lan'
+	option dest 'wan'
+	option dest_ip 'app.captifi.io'
+	option proto 'tcp'
+	option target 'ACCEPT'

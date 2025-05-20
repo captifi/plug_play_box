@@ -1,0 +1,7 @@
+This is a placeholder for the CaptiFi logo. 
+
+In a real implementation, you would put an actual PNG image file in this directory,
+named "logo.png" to match the reference in the setup.html template.
+
+The logo image should ideally be around 200px wide for optimal display in the
+activation form.

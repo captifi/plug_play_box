@@ -1,0 +1,36 @@
+# /etc/config/uhttpd
+# Configuration for the HTTP(S) server
+
+# Main HTTP server instance
+config uhttpd 'main'
+	# HTTP listen addresses, multiple allowed
+	list listen_http '0.0.0.0:80'
+
+	# HTTPS listen addresses, multiple allowed
+	# list listen_https '0.0.0.0:443'
+
+	# Path to the server root directory
+	option home '/www'
+
+	# Document root for the captive portal
+	option index_page 'index.html'
+
+	# Lua prefix and path for CGI
+	option lua_prefix '/cgi-bin'
+	option lua_handler '/www/captifi/setup.lua'
+
+	# CGI configuration
+	option cgi_prefix '/cgi-bin'
+	option cgi_path '/www/cgi-bin'
+
+	# Maximum number of concurrent requests
+	option max_requests 3
+
+	# Maximum number of concurrent connections
+	option max_connections 100
+
+	# Connection timeout
+	option tcp_keepalive '1'
+
+	# Project specific setups
+	option captifi_setup_enabled '1'

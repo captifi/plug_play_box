@@ -1,0 +1,82 @@
+#!/bin/sh /etc/rc.common
+# CaptiFi Plug & Play Box initialization script
+# This script runs at boot time to configure the setup environment
+
+START=95
+STOP=05
+USE_PROCD=1
+
+CAPTIFI_CONFIG="/etc/captifi_config"
+SETUP_REDIRECT_RULE="captifi_setup_redirect"
+
+start_service() {
+    procd_open_instance
+    procd_set_param command /bin/sh -c "sleep 5 && /etc/init.d/captifi check_status"
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_close_instance
+    
+    # Initial check
+    check_status
+}
+
+check_status() {
+    # Check if config file exists and box is activated
+    if [ -f "$CAPTIFI_CONFIG" ]; then
+        # Source the configuration file
+        . $CAPTIFI_CONFIG
+        
+        if [ "$ACTIVATED" = "true" ]; then
+            # Box is activated, disable setup redirect
+            logger -t captifi "Box is activated, disabling setup redirect"
+            disable_setup_redirect
+            
+            # Update uHTTPd configuration to serve the real splash page
+            uci set uhttpd.main.index_page="splash.html"
+            uci commit uhttpd
+            /etc/init.d/uhttpd restart
+        else
+            # Box is not activated, enable setup redirect
+            logger -t captifi "Box is not activated, enabling setup redirect"
+            enable_setup_redirect
+            
+            # Update uHTTPd configuration to serve the setup page
+            uci set uhttpd.main.index_page="setup.html"
+            uci commit uhttpd
+            /etc/init.d/uhttpd restart
+        fi
+    else
+        # No config file, enable setup redirect
+        logger -t captifi "No configuration file found, enabling setup redirect"
+        enable_setup_redirect
+        
+        # Update uHTTPd configuration to serve the setup page
+        uci set uhttpd.main.index_page="setup.html"
+        uci commit uhttpd
+        /etc/init.d/uhttpd restart
+    fi
+}
+
+enable_setup_redirect() {
+    # Enable firewall redirect rule
+    uci set firewall.${SETUP_REDIRECT_RULE}.enabled='1'
+    uci commit firewall
+    /etc/init.d/firewall restart
+}
+
+disable_setup_redirect() {
+    # Disable firewall redirect rule
+    uci set firewall.${SETUP_REDIRECT_RULE}.enabled='0'
+    uci commit firewall
+    /etc/init.d/firewall restart
+}
+
+reload_service() {
+    check_status
+}
+
+stop_service() {
+    # Just for completeness, we don't actually stop any persistent service
+    # But we could clean up if needed
+    logger -t captifi "Service stopped"
+}
