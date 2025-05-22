@@ -68,7 +68,7 @@ curl -k -L -X POST "https://api.captifi.io/api/plug-and-play/heartbeat" \
   -d "{\"mac_address\":\"$MAC_ADDRESS\",\"server_id\":$SERVER_ID,\"uptime\":$UPTIME,\"serial\":\"OpenWrt-Device\",\"device_model\":\"OpenWrt\"}" > /tmp/heartbeat_response.log 2>&1
 EOSCRIPT
     chmod +x /etc/captifi/scripts/heartbeat.sh
-    
+
     # Add cron job
     mkdir -p /etc/crontabs
     echo "*/5 * * * * /etc/captifi/scripts/heartbeat.sh" > /etc/crontabs/root
