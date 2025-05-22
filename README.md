@@ -1,145 +1,53 @@
-# CaptiFi Plug & Play Box - OpenWrt Implementation
+# CaptiFi Plug & Play Box
 
-This repository contains all the necessary files to implement a custom setup splash page for CaptiFi Plug & Play boxes running on OpenWrt devices. The implementation allows users to easily activate their OpenWrt devices with a PIN before they can be used with the main CaptiFi captive portal.
+This repository contains the installation scripts and documentation for setting up a CaptiFi captive portal on OpenWRT devices.
 
-## Quick Installation
+## Overview
 
-For quick setup, use our automated installation script:
+CaptiFi Plug & Play Box is a solution for quickly setting up captive portal WiFi hotspots on OpenWRT-compatible devices. It provides:
 
-```bash
-# One-line installation
-curl -sSL https://raw.githubusercontent.com/captifi/plug_play_box/main/openwrt-install.sh | sh
-```
+- Simple one-script installation
+- PIN-based activation system
+- Integration with CaptiFi server
+- Automatic device registration
+- Heartbeat monitoring
 
-For more detailed installation instructions, see [README-OPENWRT-INSTALL.md](README-OPENWRT-INSTALL.md).
+## Quick Start
 
-## File Structure
-
-```
-/
-├── README.md                      # This file
-├── openwrt-install.sh             # Automated installation script
-├── etc/                           # OpenWrt system configuration
-│   ├── config/                    # Configuration files
-│   │   ├── firewall               # Firewall rules for captive portal
-│   │   └── uhttpd                 # Web server configuration
-│   └── init.d/                    # Init scripts
-│       └── captifi                # CaptiFi service startup script
-└── www/                           # Web root directory
-    └── captifi/                   # CaptiFi setup application
-        ├── activate.cgi           # CGI script to handle PIN activation
-        ├── setup.html             # Main setup page HTML template
-        ├── setup.lua              # Lua handler for setup page
-        ├── splash.html            # Transition page after activation
-        └── assets/                # Static assets
-            └── logo-placeholder.txt # Placeholder for logo image
-```
-
-## How It Works
-
-1. **Initial Boot**: When the OpenWrt device boots for the first time, the `captifi` init script checks if the device is activated:
-   - If not activated, it enables the captive portal redirect
-   - All HTTP traffic is redirected to the setup page
-
-2. **Setup Page**: Users see the `setup.html` page which:
-   - Shows the device's MAC address
-   - Provides a form to enter their 8-digit activation PIN
-   - Validates input client-side
-
-3. **Activation Process**:
-   - When the PIN is submitted, the `activate.cgi` script calls `captifi-client.sh activate`
-   - If successful, the device is registered with the CaptiFi server
-   - Configuration is updated to disable the redirect
-   - The device now serves the real splash page from the CaptiFi server
-
-4. **Post-Activation**:
-   - After activation, the `captifi` service detects the change
-   - Firewall redirect is disabled
-   - Web server is reconfigured to serve the real splash page
-   - The device inherits all settings from the associated site in CaptiFi
-
-## Installation on OpenWrt
-
-### Automated Installation (Recommended)
-
-Our automated installation script handles all the setup for you:
-
-```bash
-curl -sSL https://raw.githubusercontent.com/captifi/plug_play_box/main/openwrt-install.sh | sh
-```
-
-This will:
-1. Install all required packages
-2. Download and place all files in the correct locations
-3. Configure your system properly
-4. Enable necessary services
-
-### Manual Installation
-
-If you prefer a more hands-on approach:
-
-1. Install required packages:
+1. Connect to your OpenWRT device via SSH:
    ```
-   opkg update
-   opkg install curl uhttpd uhttpd-mod-lua
+   ssh root@192.168.8.1
    ```
 
-2. Copy the files to the corresponding locations on your OpenWrt device:
-   - The `etc` directory files to `/etc`
-   - The `www` directory files to `/www`
-
-3. Make the scripts executable:
-   ```
-   chmod +x /etc/init.d/captifi
-   chmod +x /www/captifi/activate.cgi
+2. Download and run the installer directly:
+   ```bash
+   wget -O - https://raw.githubusercontent.com/captifi/plug_play_box/main/install.sh | sh
    ```
 
-4. Enable the CaptiFi service:
-   ```
-   /etc/init.d/captifi enable
-   /etc/init.d/captifi start
-   ```
+3. Or manually copy and paste the [installation script](install.sh) into your SSH session
 
-5. Customize the configuration:
-   - Update the CaptiFi server URL in `captifi-client.sh`
-   - Replace the logo placeholder with your actual logo
+4. Once installed, the device will broadcast a "CaptiFi-Setup" WiFi network
 
-## Activating Your Box
+5. Connect to this network from another device and follow the activation prompts
 
-After installation:
+## Documentation
 
-1. Generate a PIN in your CaptiFi admin panel
-2. On the OpenWrt device, run:
+- [Installation Guide](INSTALLATION.md) - Detailed installation instructions
+- [Troubleshooting](INSTALLATION.md#troubleshooting) - Help with common issues
+
+## Development
+
+To contribute to this project:
+
+1. Clone the repository:
    ```
-   captifi-client.sh activate YOUR_PIN_HERE
-   ```
-3. Verify status with:
-   ```
-   captifi-client.sh status
+   git clone git@github.com:captifi/plug_play_box.git
    ```
 
-## Troubleshooting
+2. Make your changes
 
-If you encounter issues:
-1. Check the log file: `/var/log/captifi.log`
-2. Verify connectivity to the CaptiFi API server
-3. Ensure the device has internet access
-4. Check the firewall rules: `uci show firewall`
+3. Submit a pull request
 
-## Security Notes
+## License
 
-- All API communication is encrypted using HTTPS
-- The PIN is only used once during activation
-- After activation, the box automatically uses the standard CaptiFi security measures
-- The MAC address of the device is verified with each request to prevent unauthorized access
-
-## Customization
-
-To customize the appearance of the setup page:
-- Edit the HTML/CSS in `setup.html`
-- Replace the logo placeholder with your actual logo
-- Adjust the firewall rules in `firewall` if needed
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+© 2025 CaptiFi. All rights reserved.

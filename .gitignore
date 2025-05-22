@@ -1,29 +1,23 @@
-# OS generated files
+# macOS
 .DS_Store
-.DS_Store?
+.AppleDouble
+.LSOverride
 ._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
-# Backup files
+# Linux
 *~
-*.bak
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Development tools
+.idea/
+.vscode/
 *.swp
-
-# Build artifacts
-*.o
-*.so
-*.ko
-*.ipk
-
-# Logs
-*.log
-
-# Temporary files
-tmp/
-temp/
-
-# Other common ignore patterns
-node_modules/
+*.swo
