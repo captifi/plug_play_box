@@ -31,7 +31,7 @@ if [ -z "$pin" ]; then
 fi
 
 # Call captifi-client.sh to activate the box
-RESULT=$(captifi-client.sh activate "$pin" 2>&1)
+RESULT=$(captifi-client.sh "$pin" 2>&1)
 
 if echo "$RESULT" | grep -q "Box activated successfully"; then
     # Extract server_id from the successful result
