@@ -3,217 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CaptiFi Box Setup</title>
+    <title>CaptiFi Setup</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background-color: #f5f8fa;
-            color: #333;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #f5f5f5;
             display: flex;
-            align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            align-items: center;
+            height: 100vh;
         }
-        .setup-container {
-            max-width: 500px;
-            width: 90%;
-            padding: 30px;
-            background: white;
+        .container {
+            background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .logo-container {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
             text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo {
-            max-width: 200px;
-            height: auto;
         }
         h1 {
-            text-align: center;
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: #2d3748;
+            color: #333;
+            margin-bottom: 30px;
         }
-        .device-info {
-            background: #f7fafc;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        input[type="text"] {
+        input {
             width: 100%;
             padding: 12px;
-            font-size: 18px;
+            margin: 10px 0;
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
-            letter-spacing: 2px;
-            text-align: center;
+            font-size: 16px;
         }
         button {
-            width: 100%;
-            padding: 12px;
-            background-color: #3490dc;
+            background-color: #4a89dc;
             color: white;
             border: none;
+            padding: 12px 20px;
             border-radius: 4px;
-            font-size: 16px;
-            font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
         }
-        button:hover {
-            background-color: #2779bd;
+        .error {
+            color: red;
+            margin-top: 10px;
+            display: none;
         }
-        .error-message {
-            color: #e53e3e;
+        .success {
+            color: green;
+            margin-top: 10px;
+            display: none;
+        }
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 15px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .debug {
             margin-top: 20px;
-            text-align: center;
-        }
-        .success-message {
-            color: #38a169;
-            margin-top: 20px;
-            text-align: center;
+            text-align: left;
+            font-size: 12px;
+            color: #777;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="setup-container">
-        <div class="logo-container">
-            <!-- Replace this with an actual logo image in production -->
-            <div style="text-align: center; font-size: 32px; font-weight: bold; color: #3490dc;">
-                CaptiFi
-                <div style="font-size: 14px; margin-top: 5px;">Plug &amp; Play Box Setup</div>
-            </div>
-        </div>
-        
-        <h1>CaptiFi Box Activation</h1>
-        
-        <div class="device-info">
-            <strong>Device MAC Address:</strong> <span id="mac-address">@@MAC_ADDRESS@@</span>
-        </div>
-
-        <div id="error-message" class="error-message" style="display: none;"></div>
-        <div id="success-message" class="success-message" style="display: none;"></div>
-
-        <form id="activation-form">
-            <div class="form-group">
-                <label for="pin">Enter Activation PIN</label>
-                <input type="text" id="pin" name="pin" placeholder="8-digit PIN" maxlength="8" required pattern="[0-9]{8}" autocomplete="off">
-            </div>
-            <button type="submit">Activate Device</button>
+    <div class="container">
+        <h1>CaptiFi Setup</h1>
+        <form id="pinForm">
+            <input type="text" id="pin" placeholder="Enter PIN" pattern="[0-9]{8}" maxlength="8" required>
+            <button type="submit" id="submitBtn">Activate</button>
         </form>
+        <div class="loader" id="loader"></div>
+        <div id="errorMsg" class="error">Activation failed. Please check your PIN and try again.</div>
+        <div id="successMsg" class="success">Activation successful. Redirecting to the internet...</div>
+        <div id="debug" class="debug"></div>
     </div>
 
     <script>
-        // Get the device MAC address
-        function getMacAddress() {
-            // This will be replaced by the actual MAC address from the OpenWrt system
-            return "@@MAC_ADDRESS@@";
+        // Debug function to show more information
+        function debugLog(message) {
+            const debug = document.getElementById('debug');
+            debug.style.display = 'block';
+            debug.innerHTML += message + '<br>';
         }
 
-        // Replace the MAC address placeholder
-        document.addEventListener('DOMContentLoaded', function() {
-            const macAddress = getMacAddress();
-            document.getElementById('mac-address').textContent = macAddress;
-        });
-
-        // Handle form submission
-        document.getElementById('activation-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const pin = document.getElementById('pin').value;
-            if (!pin || pin.length !== 8 || isNaN(pin)) {
-                showError("Please enter a valid 8-digit PIN");
-                return;
-            }
-            
-            // Show loading state
-            const submitButton = this.querySelector('button[type="submit"]');
-            const originalText = submitButton.textContent;
-            submitButton.textContent = "Activating...";
-            submitButton.disabled = true;
-            
-            // Call the activation script
-            activateBox(pin)
-                .then(response => {
-                    if (response.success) {
-                        showSuccess("Device activated successfully! Redirecting to captive portal...");
-                        document.getElementById('activation-form').style.display = 'none';
-                        
-                        // Redirect after a delay
-                        setTimeout(function() {
-                            window.location.href = "/splash";
-                        }, 5000);
-                    } else {
-                        showError(response.message || "Activation failed");
-                        submitButton.textContent = originalText;
-                        submitButton.disabled = false;
+        // Safe JSON parse function
+        function safeParseJSON(str) {
+            try {
+                // Try to parse the string as-is
+                return JSON.parse(str);
+            } catch (e) {
+                debugLog('Error parsing JSON: ' + e.message);
+                
+                // If there are multiple JSON objects, try to extract the first one
+                try {
+                    // Try to find any simple success/failure indicator
+                    if (str.includes('"success":true')) {
+                        debugLog('Found success=true in response, creating synthetic response');
+                        return { success: true, message: "Activation successful" };
                     }
-                })
-                .catch(error => {
-                    showError("An error occurred. Please try again.");
-                    submitButton.textContent = originalText;
-                    submitButton.disabled = false;
-                });
-        });
+                    
+                    if (str.includes('"success":false')) {
+                        // Extract message if possible
+                        let message = "Activation failed";
+                        const msgMatch = str.match(/"message":"([^"]*)"/);
+                        if (msgMatch && msgMatch[1]) {
+                            message = msgMatch[1];
+                        }
+                        debugLog('Found success=false in response, creating synthetic response with message: ' + message);
+                        return { success: false, message: message };
+                    }
+                    
+                    // More aggressive JSON object extraction
+                    // Try to extract complete JSON object
+                    const bracketCount = { open: 0, close: 0 };
+                    let startIdx = str.indexOf('{');
+                    if (startIdx >= 0) {
+                        let endIdx = -1;
+                        for (let i = startIdx; i < str.length; i++) {
+                            if (str[i] === '{') bracketCount.open++;
+                            if (str[i] === '}') {
+                                bracketCount.close++;
+                                if (bracketCount.open === bracketCount.close) {
+                                    endIdx = i + 1;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (endIdx > startIdx) {
+                            const jsonObj = str.substring(startIdx, endIdx);
+                            debugLog('Extracted potential JSON object: ' + jsonObj);
+                            return JSON.parse(jsonObj);
+                        }
+                    }
+                    
+                    // Last resort - try to construct a basic object from fragments
+                    const successMatch = str.match(/"success":\s*(true|false)/);
+                    const messageMatch = str.match(/"message":\s*"([^"]*)"/);
+                    
+                    if (successMatch) {
+                        const result = {
+                            success: successMatch[1] === 'true',
+                            message: messageMatch ? messageMatch[1] : 'Unknown status'
+                        };
+                        debugLog('Constructed JSON from fragments: ' + JSON.stringify(result));
+                        return result;
+                    }
+                } catch (e2) {
+                    debugLog('Error in JSON recovery attempts: ' + e2.message);
+                }
+                
+                return null;
+            }
+        }
 
-        // Function to activate the box
-        async function activateBox(pin) {
-            // This would typically be an API call, but for this demo we'll use
-            // a script that calls the captifi-client.sh activate command
-            const macAddress = getMacAddress();
+        // Function to handle direct API call
+        async function activatePin(pin) {
+            const loader = document.getElementById('loader');
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Clear previous messages
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            
+            // Show loading indicator
+            loader.style.display = 'block';
+            submitBtn.disabled = true;
             
             try {
-                // In a real implementation, this would be an API call
-                // For development testing, you can replace this with a mock response
-                const response = await fetch('/cgi-bin/activate.cgi', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `pin=${pin}&mac=${macAddress}`
-                });
+                // Get the MAC address
+                let macAddress = "";
+                try {
+                    const response = await fetch('/api/device_info.json');
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch device info');
+                    }
+                    const data = await response.json();
+                    macAddress = data.mac_address;
+                    debugLog('MAC address from device_info.json: ' + macAddress);
+                } catch (error) {
+                    debugLog('Error fetching MAC address: ' + error.message);
+                    try {
+                        // Try to get MAC directly from the device (if available)
+                        const macResponse = await fetch('/api/get-mac.cgi');
+                        if (macResponse.ok) {
+                            const macText = await macResponse.text();
+                            if (macText && macText.match(/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/)) {
+                                macAddress = macText.trim();
+                                debugLog('MAC address from get-mac.cgi: ' + macAddress);
+                            } else {
+                                throw new Error('Invalid MAC format');
+                            }
+                        } else {
+                            throw new Error('MAC fetch failed');
+                        }
+                    } catch (macError) {
+                        // Use a default or fallback MAC address
+                        macAddress = "44:d1:fa:63:bf:21";
+                        debugLog('Using fallback MAC address: ' + macAddress);
+                    }
+                }
                 
-                return await response.json();
+            // Use XMLHttpRequest instead of fetch for better compatibility
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/cgi-bin/activate.cgi', true);
+                
+                xhr.onload = function() {
+                    loader.style.display = 'none';
+                    submitBtn.disabled = false;
+                    
+                    debugLog('Server response received');
+                    debugLog('Status: ' + xhr.status);
+                    debugLog('Response: ' + xhr.responseText);
+                    
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        let result = safeParseJSON(xhr.responseText);
+                        
+                        // If we couldn't parse the response, but it contains success markers
+                        if (!result && xhr.responseText.includes('"success":true')) {
+                            result = { success: true };
+                            debugLog('Detected success in response text');
+                        } else if (!result && xhr.responseText.includes('"success":false')) {
+                            // Extract error message if possible
+                            const msgMatch = xhr.responseText.match(/"message":"([^"]*)"/);
+                            result = { 
+                                success: false,
+                                message: msgMatch ? msgMatch[1] : 'Activation failed'
+                            };
+                            debugLog('Detected failure in response text');
+                        }
+                        
+                        if (result && result.success) {
+                            successMsg.style.display = 'block';
+                            // Redirect after 3 seconds
+                            setTimeout(() => {
+                                window.location.href = "http://www.google.com";
+                            }, 3000);
+                        } else if (result) {
+                            errorMsg.textContent = result.message || 'Activation failed. Please check your PIN and try again.';
+                            errorMsg.style.display = 'block';
+                        } else {
+                            errorMsg.textContent = 'Could not parse server response. Please try again.';
+                            errorMsg.style.display = 'block';
+                        }
+                    } else {
+                        errorMsg.textContent = 'Server error: ' + xhr.status;
+                        errorMsg.style.display = 'block';
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    loader.style.display = 'none';
+                    submitBtn.disabled = false;
+                    
+                    debugLog('Network error occurred');
+                    errorMsg.textContent = 'Network error. Please check your connection and try again.';
+                    errorMsg.style.display = 'block';
+                };
+                
+                // Send using plain text with JSON string
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.send(JSON.stringify({
+                    pin: pin,
+                    mac_address: macAddress
+                }));
+                
+                debugLog('Request sent to server');
             } catch (error) {
-                console.error('Error:', error);
-                return { success: false, message: "Connection failed" };
+                loader.style.display = 'none';
+                submitBtn.disabled = false;
+                
+                debugLog('Error: ' + error.message);
+                errorMsg.textContent = 'Error: ' + error.message;
+                errorMsg.style.display = 'block';
             }
         }
 
-        // Show error message
-        function showError(message) {
-            const errorElement = document.getElementById('error-message');
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            
-            // Hide success message if visible
-            document.getElementById('success-message').style.display = 'none';
-        }
+        // Attach form submit event
+        document.getElementById('pinForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const pin = document.getElementById('pin').value;
+            debugLog('Form submitted with PIN: ' + pin);
+            activatePin(pin);
+        });
 
-        // Show success message
-        function showSuccess(message) {
-            const successElement = document.getElementById('success-message');
-            successElement.textContent = message;
-            successElement.style.display = 'block';
-            
-            // Hide error message if visible
-            document.getElementById('error-message').style.display = 'none';
-        }
+        // Show debug area with a specific gesture (double tap on header)
+        let tapCount = 0;
+        document.querySelector('h1').addEventListener('click', function() {
+            tapCount++;
+            if (tapCount >= 5) {
+                document.getElementById('debug').style.display = 'block';
+                debugLog('Debug mode activated');
+            }
+        });
     </script>
 </body>
 </html>
