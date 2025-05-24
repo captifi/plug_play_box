@@ -1,0 +1,1 @@
+# CaptiFi PIN Registry Security
