@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# CaptiFi Plug & Play Box Installer
-# This script installs CaptiFi on OpenWRT devices
+# CaptiFi Plug & Play Box Installer (Improved)
+# This script installs CaptiFi on OpenWRT devices with device info scripts
 # Website: https://captifi.io
 
 # Step 1: Create the base installer
@@ -62,10 +62,11 @@ if echo "$RESPONSE" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
 MAC_ADDRESS=$(cat /sys/class/net/br-lan/address)
 SERVER_ID=$(cat /etc/captifi/server_id)
 UPTIME=$(cat /proc/uptime | awk '{print $1}')
+MODEL=$(cat /tmp/sysinfo/model 2>/dev/null || echo "OpenWrt Device")
 curl -k -L -X POST "https://api.captifi.io/api/plug-and-play/heartbeat" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: CAPTIFI_API_KEY" \
-  -d "{\"mac_address\":\"$MAC_ADDRESS\",\"server_id\":$SERVER_ID,\"uptime\":$UPTIME,\"serial\":\"OpenWrt-Device\",\"device_model\":\"OpenWrt\"}" > /tmp/heartbeat_response.log 2>&1
+  -d "{\"mac_address\":\"$MAC_ADDRESS\",\"server_id\":$SERVER_ID,\"uptime\":$UPTIME,\"serial\":\"OpenWrt-Device\",\"device_model\":\"$MODEL\"}" > /tmp/heartbeat_response.log 2>&1
 EOSCRIPT
     chmod +x /etc/captifi/scripts/heartbeat.sh
 
@@ -77,14 +78,60 @@ fi
 CGI_EOF
 chmod +x /www/captifi/api/activate.cgi
 
+# Create MAC address retrieval script
+cat > /www/captifi/api/get-mac.cgi << 'MAC_CGI_EOF'
+#!/bin/sh
+# CaptiFi MAC Address retrieval script
+# Returns the MAC address of the device br-lan interface
+
+echo "Content-Type: application/json"
+echo "Access-Control-Allow-Origin: *"
+echo ""
+
+# Get MAC address using multiple methods for reliability
+MAC_ADDRESS=$(cat /sys/class/net/br-lan/address 2>/dev/null)
+if [ -z "$MAC_ADDRESS" ]; then
+    MAC_ADDRESS=$(ip link show br-lan | grep ether | awk '{print $2}' 2>/dev/null)
+fi
+if [ -z "$MAC_ADDRESS" ]; then
+    MAC_ADDRESS="00:00:00:00:00:00"  # Fallback if MAC cannot be determined
+fi
+
+# Return as JSON
+echo "{\"mac_address\":\"$MAC_ADDRESS\"}"
+MAC_CGI_EOF
+chmod +x /www/captifi/api/get-mac.cgi
+
+# Create Model retrieval script
+cat > /www/captifi/api/get-model.cgi << 'MODEL_CGI_EOF'
+#!/bin/sh
+# CaptiFi Device Model retrieval script
+# Returns the model information of the device
+
+echo "Content-Type: application/json"
+echo "Access-Control-Allow-Origin: *"
+echo ""
+
+# Get device model using multiple methods for reliability
+MODEL=$(cat /tmp/sysinfo/model 2>/dev/null)
+if [ -z "$MODEL" ]; then
+    MODEL="OpenWrt Device"  # Fallback if model cannot be determined
+fi
+
+# Return as JSON
+echo "{\"model\":\"$MODEL\"}"
+MODEL_CGI_EOF
+chmod +x /www/captifi/api/get-model.cgi
+
 # Create device info
 cat > /www/captifi/api/device_info.json << EOF
 {
-    "mac_address": "$(cat /sys/class/net/br-lan/address)"
+    "mac_address": "$(cat /sys/class/net/br-lan/address)",
+    "model": "$(cat /tmp/sysinfo/model 2>/dev/null || echo 'OpenWrt Device')"
 }
 EOF
 
-# Create HTML page
+# Create HTML page with device info display
 cat > /www/captifi/index.html << 'HTML_EOF'
 <!DOCTYPE html>
 <html>
@@ -96,6 +143,8 @@ cat > /www/captifi/index.html << 'HTML_EOF'
         body { font-family: Arial; margin: 0; background: #f5f5f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 30px; width: 90%; max-width: 400px; text-align: center; }
         h1 { color: #333; margin-bottom: 30px; }
+        .device-info { background: #f8f8f8; padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: left; font-size: 14px; }
+        .device-info p { margin: 5px 0; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
         button { background: #4a89dc; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
         .error, .success { margin-top: 10px; display: none; }
@@ -109,6 +158,10 @@ cat > /www/captifi/index.html << 'HTML_EOF'
 <body>
     <div class="container">
         <h1>CaptiFi Setup</h1>
+        <div class="device-info">
+            <p><strong>Device Model:</strong> <span id="deviceModel">Loading...</span></p>
+            <p><strong>MAC Address:</strong> <span id="macAddress">Loading...</span></p>
+        </div>
         <form id="pinForm">
             <input type="text" id="pin" placeholder="Enter PIN" pattern="[0-9]{8}" maxlength="8" required>
             <button type="submit" id="submitBtn">Activate</button>
@@ -120,6 +173,45 @@ cat > /www/captifi/index.html << 'HTML_EOF'
     </div>
     <script>
         function debugLog(msg) { const debug = document.getElementById('debug'); debug.style.display = 'block'; debug.innerHTML += msg + '<br>'; }
+        
+        // Load device information
+        async function loadDeviceInfo() {
+            try {
+                // Try to load from device_info.json first (fastest)
+                const infoResponse = await fetch('/api/device_info.json');
+                if (infoResponse.ok) {
+                    const data = await infoResponse.json();
+                    if (data.mac_address) document.getElementById('macAddress').textContent = data.mac_address;
+                    if (data.model) document.getElementById('deviceModel').textContent = data.model;
+                }
+                
+                // Then try to get fresh data from the CGI scripts
+                try {
+                    const macResponse = await fetch('/api/get-mac.cgi');
+                    if (macResponse.ok) {
+                        const macData = await macResponse.json();
+                        document.getElementById('macAddress').textContent = macData.mac_address;
+                    }
+                } catch(e) { debugLog('MAC CGI error: ' + e.message); }
+                
+                try {
+                    const modelResponse = await fetch('/api/get-model.cgi');
+                    if (modelResponse.ok) {
+                        const modelData = await modelResponse.json();
+                        document.getElementById('deviceModel').textContent = modelData.model;
+                    }
+                } catch(e) { debugLog('Model CGI error: ' + e.message); }
+                
+            } catch(e) { 
+                debugLog('Device info error: ' + e.message);
+                document.getElementById('macAddress').textContent = 'Unknown';
+                document.getElementById('deviceModel').textContent = 'Unknown';
+            }
+        }
+        
+        // Load device info on page load
+        window.addEventListener('load', loadDeviceInfo);
+        
         async function activatePin(pin) {
             const loader = document.getElementById('loader');
             const errorMsg = document.getElementById('errorMsg');
@@ -130,16 +222,23 @@ cat > /www/captifi/index.html << 'HTML_EOF'
             loader.style.display = 'block';
             submitBtn.disabled = true;
             try {
-                let macAddress = "";
-                try {
-                    const response = await fetch('/api/device_info.json');
-                    if (response.ok) {
-                        const data = await response.json();
-                        macAddress = data.mac_address;
-                        debugLog('MAC: ' + macAddress);
-                    }
-                } catch(e) { debugLog('MAC error: ' + e.message); }
-                if (!macAddress) macAddress = "00:00:00:00:00:00";
+                let macAddress = document.getElementById('macAddress').textContent;
+                if (macAddress === 'Loading...' || macAddress === 'Unknown') {
+                    // Try to get MAC from CGI if not loaded
+                    try {
+                        const response = await fetch('/api/get-mac.cgi');
+                        if (response.ok) {
+                            const data = await response.json();
+                            macAddress = data.mac_address;
+                            debugLog('MAC from CGI: ' + macAddress);
+                        }
+                    } catch(e) { debugLog('MAC CGI error: ' + e.message); }
+                }
+                
+                // Fallback if still no MAC
+                if (macAddress === 'Loading...' || macAddress === 'Unknown') {
+                    macAddress = "00:00:00:00:00:00";
+                }
                 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', '/api/activate.cgi', true);
@@ -172,12 +271,14 @@ cat > /www/captifi/index.html << 'HTML_EOF'
                 errorMsg.style.display = 'block';
             }
         }
+        
         document.getElementById('pinForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const pin = document.getElementById('pin').value;
             debugLog('PIN: ' + pin);
             activatePin(pin);
         });
+        
         document.querySelector('h1').addEventListener('click', function() {
             debugLog('Debug mode');
         });
@@ -189,14 +290,18 @@ HTML_EOF
 # Configure network and services
 echo "Configuring network..."
 
-# Service file
+# Service file - update to include device info
 cat > /etc/init.d/captifi << 'SERVICE_EOF'
 #!/bin/sh /etc/rc.common
 START=99
 start() {
     mkdir -p /www/captifi/api
+    # Update device info with model and MAC
     cat > /www/captifi/api/device_info.json << EOD
-{ "mac_address": "$(cat /sys/class/net/br-lan/address)" }
+{
+    "mac_address": "$(cat /sys/class/net/br-lan/address)",
+    "model": "$(cat /tmp/sysinfo/model 2>/dev/null || echo 'OpenWrt Device')"
+}
 EOD
     if [ -f "/etc/captifi/server_id" ]; then
         /etc/init.d/cron restart
